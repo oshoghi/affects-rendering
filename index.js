@@ -11,19 +11,6 @@ function wrap (fn) {
 }
 
 /*
- * A function for comparing two sets of props for the keys given in list
- */
-function diffProps (current, next, list) {
-    for (var i = 0; i < list.length; i += 1) {
-        if (current[list[i]] !== next[list[i]]) {
-            return true;
-        }
-    }
-
-    return false;
-};
-
-/*
  * Clone React
  */
 var ReactClone = deepClone(React);
@@ -82,16 +69,20 @@ ReactClone.createClass = function (props) {
      * so that every class doesnt have to implement boilerplate code
      */
     if (renderProps.length > 0) {
-        //create a reference to the original function
-        var shouldComponentUpdate = props.shouldComponentUpdate;
-
         //wrap the original function in some logic
         props.shouldComponentUpdate = function (newProps, newState) {
-            var result = diffProps(this.props, newProps, renderProps);
-            var childResult = shouldComponentUpdate && shouldComponentUpdate.call(this, newProps, newState);
+            //if any of the renderProps have changed, automatically re-render
+            for (var i = 0; i < renderProps.length; i += 1) {
+                if (this.props[renderProps[i]] !== newProps[renderProps[i]]) {
+                    return true;
+                }
+            }
 
-            return !!(result || childResult || (this.state && newState && this.state !== newState));
+            //return false unless the state has changed
+            return !!(this.state && newState && this.state !== newState);
         };
+
+        //attach the list of renderProps to the shouldComponentUpdate function.  Mostly just used in unit testing
         props.shouldComponentUpdate.renderProps = renderProps;
     }
 

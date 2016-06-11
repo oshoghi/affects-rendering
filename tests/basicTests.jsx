@@ -16,7 +16,6 @@ describe("PropTypes", function () {
         },
 
         render: function () {
-            console.log(this.props);
             return <div />;
         }
     });
