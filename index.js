@@ -71,26 +71,16 @@ function getAffectsRenderingProps (propTypes) {
 
 var createClass = React.createClass;
 React.createClass = function (props) {
-    /*
-     * For each new class tally which properties affect rendering.  If there are none, then the shouldComponentUpdate
-     * function will be left alone and not wrapped.
-     */
+    //Determine which properties affect rendering
     var renderProps = getAffectsRenderingProps(props.propTypes);
 
-    /* If the new class includes a property with the name renderProps, inject a default shouldComponentUpdate function
-     * so that every class doesnt have to implement boilerplate code
-     */
-    if (renderProps.length > 0) {
-        //create a reference to the original function
-        var shouldComponentUpdate = props.shouldComponentUpdate;
-
+    //If the affectsRendering feature is used in at least one prop, then inject a shouldComponentUpdate function
+    if (renderProps.length > 0 && !props.shouldComponentUpdate) {
         //wrap the original function in some logic
         props.shouldComponentUpdate = function (nextProps, nextState) {
-            var result = diffProps(this.props, nextProps, renderProps);
-            var childResult = shouldComponentUpdate && shouldComponentUpdate.call(this, nextProps, nextState);
-
-            return !!(result || childResult || (this.state && nextState && this.state !== nextState));
+            return !!(diffProps(this.props, nextProps, renderProps) || (this.state && nextState && this.state !== nextState));
         };
+        //attach the renderProps to the shouldComponentUpdate method.  This is just to expose them to unit tests
         props.shouldComponentUpdate.renderProps = renderProps;
     }
 
