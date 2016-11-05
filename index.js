@@ -77,8 +77,12 @@ React.createClass = function (props) {
     //If the affectsRendering feature is used in at least one prop, then inject a shouldComponentUpdate function
     if (renderProps.length > 0 && !props.shouldComponentUpdate) {
         //wrap the original function in some logic
-        props.shouldComponentUpdate = function (nextProps, nextState) {
-            return !!(diffProps(this.props, nextProps, renderProps) || (this.state && nextState && this.state !== nextState));
+        props.shouldComponentUpdate = function (nextProps, nextState, nextContext) {
+            return !!(
+                (this.state && nextState && this.state !== nextState) ||
+                (this.context && nextContext && this.context !== nextContext) ||
+                diffProps(this.props, nextProps, renderProps)
+            );
         };
         //attach the renderProps to the shouldComponentUpdate method.  This is just to expose them to unit tests
         props.shouldComponentUpdate.renderProps = renderProps;
@@ -93,7 +97,7 @@ React.createClass = function (props) {
  * modify the prototype of React.Component and account for components which do not wish to use the
  * features of re-react.
  */
-React.Component.prototype.shouldComponentUpdate = function (nextProps, nextState) {
+React.Component.prototype.shouldComponentUpdate = function (nextProps, nextState, nextContext) {
     var constructor = Object.getPrototypeOf(this).constructor;
 
     if (typeof(constructor.renderProps) === "undefined") {
@@ -104,7 +108,7 @@ React.Component.prototype.shouldComponentUpdate = function (nextProps, nextState
         return true;
     }
 
-    return diffProps(this.props, nextProps, constructor.renderProps) || this.state !== nextState;
+    return this.state !== nextState || this.context !== nextContext || diffProps(this.props, nextProps, constructor.renderProps);
 };
 
 module.exports = React;
