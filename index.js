@@ -73,6 +73,7 @@ var createClass = React.createClass;
 React.createClass = function (props) {
     //Determine which properties affect rendering
     var renderProps = getAffectsRenderingProps(props.propTypes);
+    var contextProps = getAffectsRenderingProps(props.contextTypes);
 
     //If the affectsRendering feature is used in at least one prop, then inject a shouldComponentUpdate function
     if (renderProps.length > 0 && !props.shouldComponentUpdate) {
@@ -80,7 +81,7 @@ React.createClass = function (props) {
         props.shouldComponentUpdate = function (nextProps, nextState, nextContext) {
             return !!(
                 (this.state && nextState && this.state !== nextState) ||
-                (this.context && nextContext && this.context !== nextContext) ||
+                diffProps(this.context, nextContext, contextProps) ||
                 diffProps(this.props, nextProps, renderProps)
             );
         };
