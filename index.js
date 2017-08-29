@@ -25,7 +25,7 @@ function diffProps (current, next, list) {
 /*
  * Decorate the complex validators that return a validator
  */
-["oneOf", "oneOfType", "arrayOf"].forEach(function (type) {
+["oneOf", "oneOfType", "arrayOf", "shape"].forEach(function (type) {
     var validator = React.PropTypes[type];
 
     React.PropTypes[type] = function () {
