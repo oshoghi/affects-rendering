@@ -4,15 +4,16 @@ jest.dontMock("../index.js");
 
 describe("PropTypes", function () {
     var React = require("../index.js"),
-        ReactTestUtils = require("react-addons-test-utils"),
+        PropTypes = require("prop-types"),
+        ReactTestUtils = require("react-dom/test-utils"),
         _ = require("underscore");
 
     var TestComp = React.createClass({
         propTypes: {
-            prop1: React.PropTypes.string.isRequired.affectsRendering,
-            prop2: React.PropTypes.string.isRequired,
-            prop3: React.PropTypes.object.affectsRendering,
-            prop4: React.PropTypes.number
+            prop1: PropTypes.string.isRequired.affectsRendering,
+            prop2: PropTypes.string.isRequired,
+            prop3: PropTypes.object.affectsRendering,
+            prop4: PropTypes.number
         },
 
         render: function () {
@@ -41,72 +42,121 @@ describe("PropTypes", function () {
         return ReactTestUtils.renderIntoDocument(<Wrapper opts={opts} />);
     }
 
-    it("oneOfType validator", function () {
-        var validator = React.PropTypes.oneOfType([
-            React.PropTypes.string,
-            React.PropTypes.number
-        ]);
+    // PropTypes.checkPropTypes does NOT report the same error message more than once
+    // so we have to alter the message for each call
+    // the easiest way is to make up a new component name
+    // Ref:
+    // https://github.com/facebook/prop-types/issues/91
+    // would be nice if this PR is accepted:
+    // https://github.com/facebook/prop-types/pull/54/files
+    var _checkCount = 0;
+    function getUniqueCompName() {
+        return "my comp " + _checkCount++;
+    }
 
-        //array should not match the condition
-        expect(_.isError(validator({ someProp: [] }, "someProp", "my comp"))).toBe(true);
+    describe("validators", () => {
+        let consoleError;
+        beforeAll(() => {
+            consoleError = console.error;
+        });
+        afterAll(() => {
+            console.error = consoleError;
+        });
+    
+        beforeEach(() => {
+            console.error = jest.fn();
+        });
+    
+        it("oneOfType validator", function () {
+            var validator = PropTypes.oneOfType([
+                PropTypes.string,
+                PropTypes.number
+            ]);
+    
+            //array should not match the condition
+            PropTypes.checkPropTypes({ someProp: validator }, { someProp: [] }, "someProp", getUniqueCompName());
+            expect(console.error).toBeCalled();
+            jest.resetAllMocks();
+    
+            //string or number do
+            PropTypes.checkPropTypes({ someProp: validator }, { someProp: 1 }, "someProp", getUniqueCompName());
+            expect(console.error).not.toBeCalled();
 
-        //string or number do
-        expect(validator({ someProp: 1 }, "someProp", "my comp")).toBeFalsy();
-        expect(validator({ someProp: "one" }, "someProp", "my comp")).toBeFalsy();
+            PropTypes.checkPropTypes({ someProp: validator }, { someProp: "one" }, "someProp", getUniqueCompName());
+            expect(console.error).not.toBeCalled();
+    
+            // //null should be okay too
+            PropTypes.checkPropTypes({ someProp: validator }, {}, "someProp", getUniqueCompName());
+            expect(console.error).not.toBeCalled();
+        });
+    
+        it("isRequired", function () {
+            var validator = PropTypes.oneOfType([
+                PropTypes.string,
+                PropTypes.number
+            ]).isRequired;
+    
+            //array should not match the condition
+            PropTypes.checkPropTypes({ someProp: validator }, { someProp: [] }, "someProp", getUniqueCompName());
+            expect(console.error).toBeCalled();
+            jest.resetAllMocks();
 
-        //null should be okay too
-        expect(validator({}, "someProp", "my comp")).toBeFalsy();
-    });
+            //string or number do
+            PropTypes.checkPropTypes({ someProp: validator }, { someProp: 1 }, "someProp", getUniqueCompName());
+            expect(console.error).not.toBeCalled();
 
-    it("isRequired", function () {
-        var validator = React.PropTypes.oneOfType([
-            React.PropTypes.string,
-            React.PropTypes.number
-        ]).isRequired;
+            PropTypes.checkPropTypes({ someProp: validator }, { someProp: "one" }, "someProp", getUniqueCompName());
+            expect(console.error).not.toBeCalled();
 
-        //array should not match the condition
-        expect(_.isError(validator({ someProp: [] }, "someProp", "my comp"))).toBe(true);
+            //null should NOT be okay
+            PropTypes.checkPropTypes({ someProp: validator }, {}, "someProp", getUniqueCompName());
+            expect(console.error).toBeCalled();
+        });
+    
+        it("affectsRendering", function () {
+            var validator = PropTypes.oneOfType([
+                PropTypes.string,
+                PropTypes.number
+            ]).affectsRendering;
+    
+            //array should not match the condition
+            PropTypes.checkPropTypes({ someProp: validator }, { someProp: [] }, "someProp", getUniqueCompName());
+            expect(console.error).toBeCalled();
+            jest.resetAllMocks();
+    
+            //string or number do
+            PropTypes.checkPropTypes({ someProp: validator }, { someProp: 1 }, "someProp", getUniqueCompName());
+            expect(console.error).not.toBeCalled();
+            PropTypes.checkPropTypes({ someProp: validator }, { someProp: "one" }, "someProp", getUniqueCompName());
+            expect(console.error).not.toBeCalled();
+    
+            //null should be okay too
+            PropTypes.checkPropTypes({ someProp: validator }, {}, "someProp", getUniqueCompName());
+            expect(console.error).not.toBeCalled();
+        });
+    
+        it("isRequired.affectsRendering", function () {
+            var validator = PropTypes.oneOfType([
+                PropTypes.string,
+                PropTypes.number
+            ]).isRequired.affectsRendering;
 
-        //string or number do
-        expect(validator({ someProp: 1 }, "someProp", "my comp")).toBeFalsy();
-        expect(validator({ someProp: "one" }, "someProp", "my comp")).toBeFalsy();
+            //array should not match the condition
+            PropTypes.checkPropTypes({ someProp: validator }, { someProp: [] }, "someProp", getUniqueCompName());
+            expect(console.error).toBeCalled();
+            jest.resetAllMocks();
 
-        //null should NOT be okay
-        expect(_.isError(validator({}, "someProp", "my comp"))).toBe(true);
-    });
+            //string or number do
+            PropTypes.checkPropTypes({ someProp: validator }, { someProp: 1 }, "someProp", getUniqueCompName());
+            expect(console.error).not.toBeCalled();
 
-    it("affectsRendering", function () {
-        var validator = React.PropTypes.oneOfType([
-            React.PropTypes.string,
-            React.PropTypes.number
-        ]).affectsRendering;
+            PropTypes.checkPropTypes({ someProp: validator }, { someProp: "one" }, "someProp", getUniqueCompName());
+            expect(console.error).not.toBeCalled();
 
-        //array should not match the condition
-        expect(_.isError(validator({ someProp: [] }, "someProp", "my comp"))).toBe(true);
-
-        //string or number do
-        expect(validator({ someProp: 1 }, "someProp", "my comp")).toBeFalsy();
-        expect(validator({ someProp: "one" }, "someProp", "my comp")).toBeFalsy();
-
-        //null should be okay too
-        expect(validator({}, "someProp", "my comp")).toBeFalsy();
-    });
-
-    it("isRequired.affectsRendering", function () {
-        var validator = React.PropTypes.oneOfType([
-            React.PropTypes.string,
-            React.PropTypes.number
-        ]).isRequired.affectsRendering;
-
-        //array should not match the condition
-        expect(_.isError(validator({ someProp: [] }, "someProp", "my comp"))).toBe(true);
-
-        //string or number do
-        expect(validator({ someProp: 1 }, "someProp", "my comp")).toBeFalsy();
-        expect(validator({ someProp: "one" }, "someProp", "my comp")).toBeFalsy();
-
-        //null should NOT be okay
-        expect(_.isError(validator({}, "someProp", "my comp"))).toBe(true);
+            //null should NOT be okay
+            PropTypes.checkPropTypes({ someProp: validator }, {}, "someProp", getUniqueCompName());
+            expect(console.error).toBeCalled();
+        });
     });
 
     it("injects shouldComponentUpdate function", function () {

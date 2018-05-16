@@ -1,3 +1,4 @@
+var PropTypes = require("prop-types");
 var React = require("react");
 
 /*
@@ -20,15 +21,15 @@ function diffProps (current, next, list) {
     }
 
     return false;
-};
+}
 
 /*
  * Decorate the complex validators that return a validator
  */
 ["oneOf", "oneOfType", "arrayOf", "shape"].forEach(function (type) {
-    var validator = React.PropTypes[type];
+    var validator = PropTypes[type];
 
-    React.PropTypes[type] = function () {
+    PropTypes[type] = function () {
         var innerValidator = validator.apply(null, arguments);
 
         //create a new type checker which will call the original React logic
@@ -49,13 +50,13 @@ function diffProps (current, next, list) {
 /*
  * Decorate all proptypes with a affectsRendering attribute that just returns the original function
  */
-Object.keys(React.PropTypes).forEach(function (type) {
-    React.PropTypes[type].affectsRendering = wrap(React.PropTypes[type]);
-    React.PropTypes[type].affectsRendering.affectsRendering = true;
+Object.keys(PropTypes).forEach(function (type) {
+    PropTypes[type].affectsRendering = wrap(PropTypes[type]);
+    PropTypes[type].affectsRendering.affectsRendering = true;
 
-    if (typeof(React.PropTypes[type].isRequired) !== "undefined") {
-        React.PropTypes[type].isRequired.affectsRendering = wrap(React.PropTypes[type].isRequired);
-        React.PropTypes[type].isRequired.affectsRendering.affectsRendering = true;
+    if (typeof(PropTypes[type].isRequired) !== "undefined") {
+        PropTypes[type].isRequired.affectsRendering = wrap(PropTypes[type].isRequired);
+        PropTypes[type].isRequired.affectsRendering.affectsRendering = true;
     }
 });
 
@@ -70,7 +71,8 @@ function getAffectsRenderingProps (propTypes) {
 }
 
 var createClass = React.createClass;
-React.createClass = function (props) {
+
+var newCreateClass = function (props) {
     //Determine which properties affect rendering
     var renderProps = getAffectsRenderingProps(props.propTypes);
     var contextProps = getAffectsRenderingProps(props.contextTypes);
@@ -91,6 +93,12 @@ React.createClass = function (props) {
 
     return createClass(props);
 };
+
+Object.defineProperty(React, "createClass", {
+    get: function () {
+        return newCreateClass;
+    }
+});
 
 /*
  * Because React checks that all component instances' prototypes includes React.Component, cloning
