@@ -1,6 +1,6 @@
 {
   "name": "re-react",
-  "version": "1.1.5",
+  "version": "1.1.7",
   "description": "A library to reduce the need for shouldComponentUpdate boilerplate",
   "main": "injex.js",
   "scripts": {
