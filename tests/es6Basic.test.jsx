@@ -4,7 +4,8 @@ jest.dontMock("../index.js");
 
 describe("PropTypes", function () {
     var React = require("../index.js"),
-        ReactTestUtils = require("react-addons-test-utils"),
+        PropTypes = require("prop-types"),
+        ReactTestUtils = require("react-dom/test-utils"),
         _ = require("underscore");
 
     class ES6Comp extends React.Component {
@@ -13,10 +14,10 @@ describe("PropTypes", function () {
         }
     }
     ES6Comp.propTypes = {
-        prop1: React.PropTypes.string.isRequired.affectsRendering,
-        prop2: React.PropTypes.string.isRequired,
-        prop3: React.PropTypes.object.affectsRendering,
-        prop4: React.PropTypes.number
+        prop1: PropTypes.string.isRequired.affectsRendering,
+        prop2: PropTypes.string.isRequired,
+        prop3: PropTypes.object.affectsRendering,
+        prop4: PropTypes.number
     };
 
     var Wrapper = React.createClass({
@@ -47,6 +48,7 @@ describe("PropTypes", function () {
         expect(typeof(component.shouldComponentUpdate)).toBe("function");
     });
 
+    // TODO: this is currenlty broken
     it("doesnt render if props dont change", function () {
         var wrapper = getWrappedComponent();
         var component = wrapper.refs.target;
