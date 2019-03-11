@@ -1,12 +1,14 @@
-window.__DEV__ = true;
+global.__DEV__ = true;
 
-jest.dontMock("../index.js");
+const React = require("react");
+const PropTypes = require("prop-types");
+const Enzyme = require("enzyme");
+const ReReact = require("../index.js");
+const Adapter = require("enzyme-adapter-react-16");
+
+Enzyme.configure({ adapter: new Adapter() })
 
 describe("PropTypes", function () {
-    var React = require("../index.js"),
-        PropTypes = require("prop-types"),
-        ReactTestUtils = require("react-dom/test-utils"),
-        _ = require("underscore");
 
     class ES6Comp extends React.Component {
         render () {
@@ -20,52 +22,51 @@ describe("PropTypes", function () {
         prop4: PropTypes.number
     };
 
-    var Wrapper = React.createClass({
-        sendProps: function (state) {
-            this.setState(state);
-        },
-
-        render: function () {
-            return <ES6Comp {...this.props.opts} {...this.state} ref="target" />;
-        }
-    });
-
-    function getWrappedComponent (opts) {
-        opts = _.defaults(opts || {}, {
+    function getWrapper (opts) {
+        opts = Object.assign({}, {
             prop1: "1",
             prop2: "2",
             prop3: {},
             prop4: 4
-        });
+        }, opts || {});
 
-        return ReactTestUtils.renderIntoDocument(<Wrapper opts={opts} />);
+        return Enzyme.mount(<ES6Comp {...opts} />);
     }
 
     it("injects shouldComponentUpdate function", function () {
-        var wrapper = getWrappedComponent();
-        var component = wrapper.refs.target;
+        const wrapper = getWrapper();
+        const component = wrapper.instance();
 
         expect(typeof(component.shouldComponentUpdate)).toBe("function");
     });
 
-    // TODO: this is currenlty broken
-    it("doesnt render if props dont change", function () {
-        var wrapper = getWrappedComponent();
-        var component = wrapper.refs.target;
-        var props = component.props;
+    it("shouldComponentUpdate returns correct value", function () {
+        const wrapper = getWrapper();
+        const component = wrapper.instance();
+        component.render = jest.fn().mockReturnValue(null);
 
-        expect(component.shouldComponentUpdate(_.defaults({ prop2: "3" }, props), component.state)).toBe(false);
-        expect(component.shouldComponentUpdate(_.defaults({ prop1: "2", prop2: "3" }, props), component.state)).toBe(true);
+        expect(component.render).not.toBeCalled();
+
+        let nextProps = Object.assign({}, component.props, { prop2: "3" });
+        expect(component.shouldComponentUpdate(nextProps, component.state, component.context)).toBe(false);
+
+        nextProps = Object.assign({}, component.props, { prop1: "2", prop2: "3" });
+        expect(component.shouldComponentUpdate(nextProps, component.state, component.context)).toBe(true);
     });
-/*
-    it("considers state", function () {
-        var wrapper = getWrappedComponent();
-        var component = wrapper.refs.target;
-        var props = component.props;
 
-        component.setState({ a: 1 });
+    it("doesnt render if props dont change", function () {
+        const wrapper = getWrapper();
+        const component = wrapper.instance();
+        component.render = jest.fn().mockReturnValue(null);
 
-        expect(component.shouldComponentUpdate(props)).toBe(false);
-        expect(component.shouldComponentUpdate(props, { a: 2 })).toBe(true);
-    });*/
+        expect(component.render).not.toBeCalled();
+
+        //change a prop which does not affect rendering
+        wrapper.setProps({ prop2: "3" });
+        expect(component.render).not.toBeCalled();
+
+        //change a prop which does affect rendering
+        wrapper.setProps({ prop1: "blah" });
+        expect(component.render).toBeCalled();
+    });
 });

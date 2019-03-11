@@ -1,14 +1,5 @@
-var PropTypes = require("prop-types");
-var React = require("react");
-
-/*
- * Simple function which just wraps the passed in function in another function
- */
-function wrap (fn) {
-    return function () {
-        return fn.apply(null, arguments);
-    };
-}
+const PropTypes = require("./lib/propTypes");
+const React = require("react");
 
 /*
  * A function for comparing two sets of props for the keys given in list
@@ -23,42 +14,6 @@ function diffProps (current, next, list) {
     return false;
 }
 
-/*
- * Decorate the complex validators that return a validator
- */
-["oneOf", "oneOfType", "arrayOf", "shape"].forEach(function (type) {
-    var validator = PropTypes[type];
-
-    PropTypes[type] = function () {
-        var innerValidator = validator.apply(null, arguments);
-
-        //create a new type checker which will call the original React logic
-        var fn = wrap(innerValidator);
-        fn.affectsRendering = wrap(innerValidator);
-        fn.affectsRendering.affectsRendering = true;
-
-        if (typeof(innerValidator.isRequired) !== "undefined") {
-            fn.isRequired = wrap(innerValidator.isRequired);
-            fn.isRequired.affectsRendering = wrap(innerValidator.isRequired);
-            fn.isRequired.affectsRendering.affectsRendering = true;
-        }
-
-        return fn;
-    };
-});
-
-/*
- * Decorate all proptypes with a affectsRendering attribute that just returns the original function
- */
-Object.keys(PropTypes).forEach(function (type) {
-    PropTypes[type].affectsRendering = wrap(PropTypes[type]);
-    PropTypes[type].affectsRendering.affectsRendering = true;
-
-    if (typeof(PropTypes[type].isRequired) !== "undefined") {
-        PropTypes[type].isRequired.affectsRendering = wrap(PropTypes[type].isRequired);
-        PropTypes[type].isRequired.affectsRendering.affectsRendering = true;
-    }
-});
 
 function getAffectsRenderingProps (propTypes) {
     var renderProps = [];
@@ -69,36 +24,6 @@ function getAffectsRenderingProps (propTypes) {
     }
     return renderProps;
 }
-
-var createClass = React.createClass;
-
-var newCreateClass = function (props) {
-    //Determine which properties affect rendering
-    var renderProps = getAffectsRenderingProps(props.propTypes);
-    var contextProps = getAffectsRenderingProps(props.contextTypes);
-
-    //If the affectsRendering feature is used in at least one prop, then inject a shouldComponentUpdate function
-    if (renderProps.length > 0 && !props.shouldComponentUpdate) {
-        //wrap the original function in some logic
-        props.shouldComponentUpdate = function (nextProps, nextState, nextContext) {
-            return !!(
-                (this.state && nextState && this.state !== nextState) ||
-                diffProps(this.context, nextContext, contextProps) ||
-                diffProps(this.props, nextProps, renderProps)
-            );
-        };
-        //attach the renderProps to the shouldComponentUpdate method.  This is just to expose them to unit tests
-        props.shouldComponentUpdate.renderProps = renderProps;
-    }
-
-    return createClass(props);
-};
-
-Object.defineProperty(React, "createClass", {
-    get: function () {
-        return newCreateClass;
-    }
-});
 
 /*
  * Because React checks that all component instances' prototypes includes React.Component, cloning
@@ -119,5 +44,3 @@ React.Component.prototype.shouldComponentUpdate = function (nextProps, nextState
 
     return this.state !== nextState || this.context !== nextContext || diffProps(this.props, nextProps, constructor.renderProps);
 };
-
-module.exports = React;
