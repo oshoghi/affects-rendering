@@ -6,21 +6,36 @@ React is an amazing library but if you use it with Redux, every mundane state ch
 
 #Example
 ```js
-  var React = require("re-react");
-  
-  var MyComponent = React.createClass({
-    propTypes: {
-      onButtonClicked: React.PropTypes.function,
-      buttonName: React.PropTypes.string.affectsRendering 
-      //Now the component will only re-render if any of it's affectsRendering properties change.  In this case, only if
-      //buttonName changes.
-    },
-  
-    render: function () {
+import React, { Component } from "react";
+import "re-react";
+import { moun } from "enzyme";
+
+class MyComponent extends Component {
+    static propTypes = {
+      propA: React.PropTypes.string.affectsRendering
+      propB: React.PropTypes.string
+    };
+
+    render () {
       return (
-        <div className="container">
-          <input type="button" onClick={this.props.onButtonClicked}>{this.props.buttonName}</input>
+        <div>
+          A: {this.props.propA}, B: {this.props.propB}
         </div>
+      );
     }
-  });
+}
+
+it("only renders when decorated props change", function () {
+    const wrapper = mount(<MyComponent propA="1" propB="2" />);
+
+    expect(wrapper.find("div").text()).toBe("A: 1, B: 2");
+
+    //modifying a prop that hasnt been set to cause re-renders will have no effect
+    wrapper.setProps({ propB: "3" });
+    expect(wrapper.find("div").text()).toBe("A: 1, B: 2");
+
+    //modifying the prop which affectsRendering, will cause re-render
+    wrapper.setProps({ propA: "3" });
+    expect(wrapper.find("div").text()).toBe("A: 3, B: 3");
+});
 ```
